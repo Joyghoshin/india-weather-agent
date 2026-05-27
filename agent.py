@@ -5,6 +5,8 @@ Agentic layer: calls Groq API (llama-3.3-70b) to generate a natural-language
 weather briefing, then formats it into a rich HTML email and sends via Gmail SMTP.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
+Schedule: Every day 5:30 AM IST (00:00 UTC)
+Recipients: joyghoshin@gmail.com, aman.roul@publicissapient.com, joy.ghosh@publicissapient.com
 """
 
 import os
@@ -22,10 +24,16 @@ sys.stdout.reconfigure(line_buffering=True)
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
-RECIPIENT_EMAIL = "joyghoshin@gmail.com"
-SENDER_EMAIL    = os.environ.get("GMAIL_SENDER")
-GMAIL_APP_PASS  = os.environ.get("GMAIL_APP_PASSWORD")
-GROQ_API_KEY    = os.environ.get("GROQ_API_KEY")
+SENDER_EMAIL   = os.environ.get("GMAIL_SENDER")
+GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASSWORD")
+GROQ_API_KEY   = os.environ.get("GROQ_API_KEY")
+
+# ── All recipients ─────────────────────────────────────────────────────────────
+RECIPIENTS = [
+    "joyghoshin@gmail.com",
+    "aman.roul@publicissapient.com",
+    "joy.ghosh@publicissapient.com",
+]
 
 
 # ── Groq agent: generate narrative ───────────────────────────────────────────
@@ -147,6 +155,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
         </div>"""
 
     narrative_html = narrative.replace('\n', '<br>')
+    recipients_display = " &nbsp;·&nbsp; ".join(RECIPIENTS)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -196,7 +205,8 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <!-- Footer -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by Groq LLaMA-3.3-70b + GitHub Actions · Sent to {RECIPIENT_EMAIL}
+        Powered by Groq LLaMA-3.3-70b + GitHub Actions<br>
+        📬 {recipients_display}
       </p>
     </div>
   </div>
@@ -204,7 +214,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
 </html>"""
 
 
-# ── Send email ────────────────────────────────────────────────────────────────
+# ── Send email to all recipients ──────────────────────────────────────────────
 def send_email(html_body: str, subject: str):
     if not SENDER_EMAIL or not GMAIL_APP_PASS:
         raise EnvironmentError(
@@ -215,28 +225,32 @@ def send_email(html_body: str, subject: str):
     msg            = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = SENDER_EMAIL
-    msg["To"]      = RECIPIENT_EMAIL
+    msg["To"]      = ", ".join(RECIPIENTS)   # all recipients in To field
     msg.attach(MIMEText(html_body, "html"))
 
     print("    📡 Connecting to Gmail SMTP...")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as server:
         server.login(SENDER_EMAIL, GMAIL_APP_PASS)
-        server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, msg.as_string())
+        # sendmail accepts a list — delivers to all in one SMTP transaction
+        server.sendmail(SENDER_EMAIL, RECIPIENTS, msg.as_string())
 
-    print(f"    ✅ Email sent to {RECIPIENT_EMAIL}")
+    print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients:")
+    for r in RECIPIENTS:
+        print(f"       • {r}")
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 def run_agent():
     from weather_engine import run_all_cities
 
-    dry_run = os.environ.get("DRY_RUN", "false").lower() == "true"
+    dry_run     = os.environ.get("DRY_RUN", "false").lower() == "true"
     target_date = str(date.today() + timedelta(days=1))
 
     print("=" * 60)
     print(f"🤖  India Weather Agent")
     print(f"📅  Forecasting for : {target_date}")
     print(f"🏙️  Cities          : Bengaluru · Delhi · Kolkata · Chennai · Mumbai")
+    print(f"📬  Recipients      : {len(RECIPIENTS)} addresses")
     print(f"🧪  Dry run mode    : {dry_run}")
     print("=" * 60)
 
@@ -267,8 +281,10 @@ def run_agent():
 
     if dry_run:
         print("\n🧪 DRY RUN — skipping email send.")
-        print(f"   Would send to : {RECIPIENT_EMAIL}")
-        print(f"   HTML length   : {len(html)} chars")
+        print(f"   Would send to:")
+        for r in RECIPIENTS:
+            print(f"     • {r}")
+        print(f"   HTML length : {len(html)} chars")
     else:
         print("\n📤 Sending email...")
         send_email(html, subject)
