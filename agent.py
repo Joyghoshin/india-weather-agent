@@ -30,7 +30,6 @@ GROQ_API_KEY   = os.environ.get("GROQ_API_KEY")
 # ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
 RECIPIENTS = [
     "joyghoshin@gmail.com",
-    "aman.roul@publicissapient.com",
     "joy.ghosh@publicissapient.com",
     "somighoshin1981@gmail.com",
     "mimiblr1978@gmail.com",
