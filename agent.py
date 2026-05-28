@@ -6,7 +6,6 @@ weather briefing, then formats it into a rich HTML email and sends via Gmail SMT
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
 Schedule: Every day 5:30 AM IST (00:00 UTC)
-Recipients: joyghoshin@gmail.com, aman.roul@publicissapient.com, joy.ghosh@publicissapient.com
 """
 
 import os
@@ -28,11 +27,14 @@ SENDER_EMAIL   = os.environ.get("GMAIL_SENDER")
 GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASSWORD")
 GROQ_API_KEY   = os.environ.get("GROQ_API_KEY")
 
-# ── All recipients ─────────────────────────────────────────────────────────────
+# ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
 RECIPIENTS = [
     "joyghoshin@gmail.com",
     "aman.roul@publicissapient.com",
     "joy.ghosh@publicissapient.com",
+    "somighoshin1981@gmail.com",
+    "mimiblr1978@gmail.com",
+    # "newperson@example.com",   ← just uncomment and add more like this
 ]
 
 
@@ -155,7 +157,6 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
         </div>"""
 
     narrative_html = narrative.replace('\n', '<br>')
-    recipients_display = " &nbsp;·&nbsp; ".join(RECIPIENTS)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -178,6 +179,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <p style="margin:8px 0 0;color:#bfdbfe;font-size:15px;">
         Forecast for {target_date} · Generated {datetime.utcnow().strftime('%H:%M UTC')}
       </p>
+      <!-- ✅ Cities always shown in header -->
       <p style="margin:6px 0 0;color:#93c5fd;font-size:13px;">
         💻 Bengaluru &nbsp;·&nbsp; 🏛️ Delhi &nbsp;·&nbsp; 🎭 Kolkata &nbsp;·&nbsp; 🌴 Chennai &nbsp;·&nbsp; 🌊 Mumbai
       </p>
@@ -202,11 +204,10 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       </h2>
       {cards_html}
 
-      <!-- Footer -->
+      <!-- ✅ Footer — no recipient emails shown -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by Groq LLaMA-3.3-70b + GitHub Actions<br>
-        📬 {recipients_display}
+        Powered by Groq LLaMA-3.3-70b + GitHub Actions
       </p>
     </div>
   </div>
@@ -225,18 +226,15 @@ def send_email(html_body: str, subject: str):
     msg            = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = SENDER_EMAIL
-    msg["To"]      = ", ".join(RECIPIENTS)   # all recipients in To field
+    msg["To"]      = ", ".join(RECIPIENTS)
     msg.attach(MIMEText(html_body, "html"))
 
     print("    📡 Connecting to Gmail SMTP...")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as server:
         server.login(SENDER_EMAIL, GMAIL_APP_PASS)
-        # sendmail accepts a list — delivers to all in one SMTP transaction
         server.sendmail(SENDER_EMAIL, RECIPIENTS, msg.as_string())
 
-    print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients:")
-    for r in RECIPIENTS:
-        print(f"       • {r}")
+    print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -281,10 +279,8 @@ def run_agent():
 
     if dry_run:
         print("\n🧪 DRY RUN — skipping email send.")
-        print(f"   Would send to:")
-        for r in RECIPIENTS:
-            print(f"     • {r}")
-        print(f"   HTML length : {len(html)} chars")
+        print(f"   Would send to : {len(RECIPIENTS)} recipients")
+        print(f"   HTML length   : {len(html)} chars")
     else:
         print("\n📤 Sending email...")
         send_email(html, subject)
