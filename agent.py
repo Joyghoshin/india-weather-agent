@@ -3,7 +3,7 @@
 agent.py
 Agentic layer: calls Mistral API (devstral-2512) to generate a natural-language
 weather briefing, formats it into a rich HTML email, sends via Gmail SMTP,
-and dispatches a WhatsApp notification via CallMeBot.
+and dispatches a push notification via ntfy.sh.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
 Schedule: Every day 5:30 AM IST (00:00 UTC)
@@ -25,8 +25,6 @@ sys.stdout.reconfigure(line_buffering=True)
 SENDER_EMAIL     = os.environ.get("GMAIL_SENDER")
 GMAIL_APP_PASS   = os.environ.get("GMAIL_APP_PASSWORD")
 MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY")
-WHATSAPP_PHONE   = os.environ.get("WHATSAPP_PHONE")
-WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
 
 # ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
 RECIPIENTS = [
@@ -236,25 +234,22 @@ def send_email(html_body: str, subject: str):
     print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
-# ── Send WhatsApp notification via CallMeBot ──────────────────────────────────
-def send_whatsapp(narrative: str, target_date: str):
-    if not WHATSAPP_PHONE or not WHATSAPP_API_KEY:
-        print("    ⚠️ WhatsApp credentials missing. Skipping WhatsApp notification.")
-        return
-
-    message = f"🌦️ *India Weather Briefing — {target_date}*\n\n{narrative}"
+# ── Send push notification via ntfy.sh ────────────────────────────────────────
+def send_push_notification(narrative: str, target_date: str):
+    topic_name = "joy-india-weather-alert-2026"  # Matches your ntfy.sh subscription topic
+    message = f"Weather Briefing for {target_date}\n\n{narrative}"
     
-    url = "https://api.callmebot.com/whatsapp.php"
-    params = {
-        "phone": WHATSAPP_PHONE,
-        "apikey": WHATSAPP_API_KEY,
-        "text": message
+    url = f"https://ntfy.sh/{topic_name}"
+    headers = {
+        "Title": f"🌦️ India Weather — {target_date}",
+        "Priority": "default",
+        "Tags": "partly_sunny,bell"
     }
 
-    print("    📡 Sending WhatsApp message via CallMeBot...")
-    resp = requests.get(url, params=params, timeout=30)
+    print("    📡 Sending push notification via ntfy.sh...")
+    resp = requests.post(url, data=message.encode('utf-8'), headers=headers, timeout=30)
     resp.raise_for_status()
-    print("    ✅ WhatsApp message sent successfully")
+    print("    ✅ Push notification sent successfully")
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -299,8 +294,8 @@ def run_agent():
     print("\n📤 Sending email...")
     send_email(html, subject)
 
-    print("\n📱 Step 4/4 — Sending WhatsApp notification...")
-    send_whatsapp(narrative, target_date)
+    print("\n📱 Step 4/4 — Sending web/mobile push notification...")
+    send_push_notification(narrative, target_date)
 
     print("\n" + "=" * 60)
     print("✅ Agent run complete.")
