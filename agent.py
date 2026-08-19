@@ -62,8 +62,8 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
         "Content-Type": "application/json",
     }
     
-   body = {
-        "model": "devstral-2512",  # Changed from "mistralai/devstral-2512"
+    body = {
+        "model": "devstral-2512",
         "max_tokens": 600,
         "temperature": 0.7,
         "messages": [
@@ -73,7 +73,6 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
             },
             {"role": "user", "content": prompt},
         ],
-    },
     }
 
     print("    📡 Calling Devstral 2512 API...")
