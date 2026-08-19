@@ -3,7 +3,7 @@
 agent.py
 Agentic layer: calls Mistral API (devstral-2512) to generate a natural-language
 weather briefing, formats it into a rich HTML email, sends via Gmail SMTP,
-and dispatches a WhatsApp notification via CallMeBot.
+and dispatches a push notification via Telegram.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
 Schedule: Every day 5:30 AM IST (00:00 UTC)
@@ -25,8 +25,6 @@ sys.stdout.reconfigure(line_buffering=True)
 SENDER_EMAIL     = os.environ.get("GMAIL_SENDER")
 GMAIL_APP_PASS   = os.environ.get("GMAIL_APP_PASSWORD")
 MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY")
-WHATSAPP_PHONE   = os.environ.get("WHATSAPP_PHONE")
-WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
 
 # ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
 RECIPIENTS = [
@@ -236,25 +234,28 @@ def send_email(html_body: str, subject: str):
     print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
-# ── Send WhatsApp notification via CallMeBot ──────────────────────────────────
-def send_whatsapp(narrative: str, target_date: str):
-    if not WHATSAPP_PHONE or not WHATSAPP_API_KEY:
-        print("    ⚠️ WhatsApp credentials missing. Skipping WhatsApp notification.")
+# ── Send notification via Telegram Bot ────────────────────────────────────────
+def send_telegram(narrative: str, target_date: str):
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+    if not bot_token or not chat_id:
+        print("    ⚠️ Telegram credentials missing. Skipping notification.")
         return
 
     message = f"🌦️ *India Weather Briefing — {target_date}*\n\n{narrative}"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     
-    url = "https://api.callmebot.com/whatsapp.php"
-    params = {
-        "phone": WHATSAPP_PHONE,
-        "apikey": WHATSAPP_API_KEY,
-        "text": message
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
     }
 
-    print("    📡 Sending WhatsApp message via CallMeBot...")
-    resp = requests.get(url, params=params, timeout=30)
+    print("    📡 Sending Telegram notification...")
+    resp = requests.post(url, json=payload, timeout=30)
     resp.raise_for_status()
-    print("    ✅ WhatsApp message sent successfully")
+    print("    ✅ Telegram notification sent successfully")
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -299,8 +300,8 @@ def run_agent():
     print("\n📤 Sending email...")
     send_email(html, subject)
 
-    print("\n📱 Step 4/4 — Sending WhatsApp notification...")
-    send_whatsapp(narrative, target_date)
+    print("\n📱 Step 4/4 — Sending Telegram notification...")
+    send_telegram(narrative, target_date)
 
     print("\n" + "=" * 60)
     print("✅ Agent run complete.")
