@@ -41,10 +41,10 @@ jobs:
       - name: 🌦️ Run Weather Agent
         timeout-minutes: 20
         env:
-          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
-          GMAIL_SENDER:       ${{ secrets.GMAIL_SENDER }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          GMAIL_SENDER: ${{ secrets.GMAIL_SENDER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          DRY_RUN:            ${{ github.event.inputs.dry_run || 'false' }}
+          DRY_RUN:         ${{ github.event.inputs.dry_run || 'false' }}
         run: python -u agent.py
 
       - name: 📁 Upload run logs
