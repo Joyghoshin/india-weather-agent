@@ -25,13 +25,19 @@ sys.stdout.reconfigure(line_buffering=True)
 SENDER_EMAIL     = os.environ.get("GMAIL_SENDER")
 GMAIL_APP_PASS   = os.environ.get("GMAIL_APP_PASSWORD")
 MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY")
+BOT_TOKEN        = os.environ.get("TELEGRAM_BOT_TOKEN")
 
-# ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
+# ── ✅ ADD / REMOVE email recipients here ─────────────────────────────────────
 RECIPIENTS = [
     "joyghoshin@gmail.com",
     "joy.ghosh@publicissapient.com",
     "somighoshin1981@gmail.com",
     "mimiblr1978@gmail.com",
+]
+
+# ── ✅ ADD / REMOVE Telegram Chat IDs here ────────────────────────────────────
+TELEGRAM_CHAT_IDS = [
+    "1109525770",  # Your Telegram Chat ID
 ]
 
 
@@ -234,28 +240,28 @@ def send_email(html_body: str, subject: str):
     print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
-# ── Send notification via Telegram Bot ────────────────────────────────────────
+# ── Send notification via Telegram Bot to all chat IDs ───────────────────────
 def send_telegram(narrative: str, target_date: str):
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
-
-    if not bot_token or not chat_id:
-        print("    ⚠️ Telegram credentials missing. Skipping notification.")
+    if not BOT_TOKEN or not TELEGRAM_CHAT_IDS:
+        print("    ⚠️ Telegram token or chat IDs missing. Skipping notification.")
         return
 
     message = f"🌦️ *India Weather Briefing — {target_date}*\n\n{narrative}"
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
-
-    print("    📡 Sending Telegram notification...")
-    resp = requests.post(url, json=payload, timeout=30)
-    resp.raise_for_status()
-    print("    ✅ Telegram notification sent successfully")
+    print("    📡 Sending Telegram notifications...")
+    for chat_id in TELEGRAM_CHAT_IDS:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown"
+        }
+        try:
+            resp = requests.post(url, json=payload, timeout=30)
+            resp.raise_for_status()
+            print(f"    ✅ Telegram notification sent to chat ID: {chat_id}")
+        except Exception as e:
+            print(f"    ❌ Failed to send to chat ID {chat_id}: {e}")
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
