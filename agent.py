@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 agent.py
-Agentic layer: calls Groq API (llama-3.1-8b-instant) to generate a natural-language
+Agentic layer: calls Groq API (meta-llama/llama-4-scout-17b-16e-instruct) to generate a natural-language
 weather briefing, then formats it into a rich HTML email and sends via Gmail SMTP.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
@@ -33,7 +33,6 @@ RECIPIENTS = [
     "joy.ghosh@publicissapient.com",
     "somighoshin1981@gmail.com",
     "mimiblr1978@gmail.com",
-    # "newperson@example.com",    ← just uncomment and add more like this
 ]
 
 
@@ -51,6 +50,7 @@ Write a concise but engaging 200-250 word weather briefing covering:
 1. A one-line overall summary of conditions across these cities
 2. Notable cities — highlight extremes (hottest, coolest, wettest, any heatwave alerts)
 3. Any active heatwave alerts with practical safety advice
+advisories
 4. A short outlook line
 
 Use a professional but friendly tone. Use city emojis naturally.
@@ -61,8 +61,10 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json",
     }
+    
+    # Using open-source Llama model on Groq
     body = {
-        "model": "llama-3.1-8b-instant",
+        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
         "max_tokens": 600,
         "temperature": 0.7,
         "messages": [
@@ -178,7 +180,6 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <p style="margin:8px 0 0;color:#bfdbfe;font-size:15px;">
         Forecast for {target_date} · Generated {datetime.utcnow().strftime('%H:%M UTC')}
       </p>
-      <!-- ✅ Cities always shown in header -->
       <p style="margin:6px 0 0;color:#93c5fd;font-size:13px;">
         💻 Bengaluru &nbsp;·&nbsp; 🏛️ Delhi &nbsp;·&nbsp; 🎭 Kolkata &nbsp;·&nbsp; 🌴 Chennai &nbsp;·&nbsp; 🌊 Mumbai
       </p>
@@ -203,10 +204,10 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       </h2>
       {cards_html}
 
-      <!-- ✅ Footer — no recipient emails shown -->
+      <!-- Footer -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by Groq LLaMA-3.1-8b-instant + GitHub Actions
+        Powered by Llama 4 Scout + GitHub Actions
       </p>
     </div>
   </div>
@@ -236,7 +237,7 @@ def send_email(html_body: str, subject: str):
     print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
-# ── Main entry point ──────────────────────────────────────────────────────────
+# ── Main entry point ──────────────────────────────────────────
 def run_agent():
     from weather_engine import run_all_cities
 
@@ -260,7 +261,7 @@ def run_agent():
 
     print(f"\n✅ Got results for {len(results)} cities")
 
-    print("\n✍️  Step 2/3 — Generating AI narrative via Groq LLaMA-3.1-8b-instant...")
+    print("\n✍️  Step 2/3 — Generating AI narrative via Groq...")
     narrative = generate_narrative(results, target_date)
     print(f"\n─── Narrative preview ───────────────────────────────")
     print(narrative[:300] + "..." if len(narrative) > 300 else narrative)
