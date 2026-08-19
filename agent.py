@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 agent.py
-Agentic layer: calls Groq API (llama-3.3-70b) to generate a natural-language
+Agentic layer: calls Groq API (llama-3.1-8b-instant) to generate a natural-language
 weather briefing, then formats it into a rich HTML email and sends via Gmail SMTP.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
@@ -33,7 +33,7 @@ RECIPIENTS = [
     "joy.ghosh@publicissapient.com",
     "somighoshin1981@gmail.com",
     "mimiblr1978@gmail.com",
-    # "newperson@example.com",   ← just uncomment and add more like this
+    # "newperson@example.com",    ← just uncomment and add more like this
 ]
 
 
@@ -62,7 +62,7 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
         "Content-Type": "application/json",
     }
     body = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "max_tokens": 600,
         "temperature": 0.7,
         "messages": [
@@ -206,7 +206,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <!-- ✅ Footer — no recipient emails shown -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by Groq LLaMA-3.3-70b + GitHub Actions
+        Powered by Groq LLaMA-3.1-8b-instant + GitHub Actions
       </p>
     </div>
   </div>
@@ -246,8 +246,8 @@ def run_agent():
     print("=" * 60)
     print(f"🤖  India Weather Agent")
     print(f"📅  Forecasting for : {target_date}")
-    print(f"🏙️  Cities          : Bengaluru · Delhi · Kolkata · Chennai · Mumbai")
-    print(f"📬  Recipients      : {len(RECIPIENTS)} addresses")
+    print(f"🏙️  Cities         : Bengaluru · Delhi · Kolkata · Chennai · Mumbai")
+    print(f"📬  Recipients     : {len(RECIPIENTS)} addresses")
     print(f"🧪  Dry run mode    : {dry_run}")
     print("=" * 60)
 
@@ -260,7 +260,7 @@ def run_agent():
 
     print(f"\n✅ Got results for {len(results)} cities")
 
-    print("\n✍️  Step 2/3 — Generating AI narrative via Groq LLaMA-3.3-70b...")
+    print("\n✍️  Step 2/3 — Generating AI narrative via Groq LLaMA-3.1-8b-instant...")
     narrative = generate_narrative(results, target_date)
     print(f"\n─── Narrative preview ───────────────────────────────")
     print(narrative[:300] + "..." if len(narrative) > 300 else narrative)
@@ -276,13 +276,8 @@ def run_agent():
 
     print(f"\n📧 Step 3/3 — Subject: {subject}")
 
-    if dry_run:
-        print("\n🧪 DRY RUN — skipping email send.")
-        print(f"   Would send to : {len(RECIPIENTS)} recipients")
-        print(f"   HTML length   : {len(html)} chars")
-    else:
-        print("\n📤 Sending email...")
-        send_email(html, subject)
+    print("\n📤 Sending email...")
+    send_email(html, subject)
 
     print("\n" + "=" * 60)
     print("✅ Agent run complete.")
