@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 agent.py
-Agentic layer: calls Groq API (openai/gpt-oss-20b) to generate a natural-language
-weather briefing, then formats it into a rich HTML email and sends via Gmail SMTP.
+Agentic layer: calls Mistral API (devstral-2512) to generate a natural-language
+weather briefing, formats it into a rich HTML email, sends via Gmail SMTP,
+and dispatches a WhatsApp notification via CallMeBot.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
 Schedule: Every day 5:30 AM IST (00:00 UTC)
@@ -17,15 +18,15 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, date
 
-
 # ── Force unbuffered stdout so GitHub Actions shows logs live ─────────────────
 sys.stdout.reconfigure(line_buffering=True)
 
-
 # ── Config ────────────────────────────────────────────────────────────────────
-SENDER_EMAIL   = os.environ.get("GMAIL_SENDER")
-GMAIL_APP_PASS = os.environ.get("GMAIL_APP_PASSWORD")
-GROQ_API_KEY   = os.environ.get("GROQ_API_KEY")
+SENDER_EMAIL     = os.environ.get("GMAIL_SENDER")
+GMAIL_APP_PASS   = os.environ.get("GMAIL_APP_PASSWORD")
+MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY")
+WHATSAPP_PHONE   = os.environ.get("WHATSAPP_PHONE")
+WHATSAPP_API_KEY = os.environ.get("WHATSAPP_API_KEY")
 
 # ── ✅ ADD / REMOVE recipients here only ──────────────────────────────────────
 RECIPIENTS = [
@@ -36,7 +37,7 @@ RECIPIENTS = [
 ]
 
 
-# ── Groq agent: generate narrative ───────────────────────────────────────────
+# ── Mistral agent: generate narrative using devstral-2512 ──────────────────────
 def generate_narrative(results: list, target_date: str) -> str:
     summary_json = json.dumps(results, indent=2)
 
@@ -57,13 +58,12 @@ Do NOT repeat raw numbers — synthesize them into narrative.
 Return ONLY the narrative text, no JSON, no markdown headers."""
 
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Authorization": f"Bearer {MISTRAL_API_KEY}",
         "Content-Type": "application/json",
     }
     
-    # Using active open-weights production model on Groq
     body = {
-        "model": "openai/gpt-oss-20b",
+        "model": "mistralai/devstral-2512",
         "max_tokens": 600,
         "temperature": 0.7,
         "messages": [
@@ -75,15 +75,15 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
         ],
     }
 
-    print("    📡 Calling Groq API...")
+    print("    📡 Calling Devstral 2512 API...")
     resp = requests.post(
-        "https://api.groq.com/openai/v1/chat/completions",
+        "https://api.mistral.ai/v1/chat/completions",
         headers=headers,
         json=body,
         timeout=60,
     )
     resp.raise_for_status()
-    print("    ✅ Groq response received")
+    print("    ✅ Devstral response received")
     return resp.json()["choices"][0]["message"]["content"].strip()
 
 
@@ -206,7 +206,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <!-- Footer -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by GPT OSS 20B + GitHub Actions
+        Powered by Devstral 2512 + GitHub Actions
       </p>
     </div>
   </div>
@@ -236,7 +236,28 @@ def send_email(html_body: str, subject: str):
     print(f"    ✅ Email sent to {len(RECIPIENTS)} recipients")
 
 
-# ── Main entry point ──────────────────────────────────────────
+# ── Send WhatsApp notification via CallMeBot ──────────────────────────────────
+def send_whatsapp(narrative: str, target_date: str):
+    if not WHATSAPP_PHONE or not WHATSAPP_API_KEY:
+        print("    ⚠️ WhatsApp credentials missing. Skipping WhatsApp notification.")
+        return
+
+    message = f"🌦️ *India Weather Briefing — {target_date}*\n\n{narrative}"
+    
+    url = "https://api.callmebot.com/whatsapp.php"
+    params = {
+        "phone": WHATSAPP_PHONE,
+        "apikey": WHATSAPP_API_KEY,
+        "text": message
+    }
+
+    print("    📡 Sending WhatsApp message via CallMeBot...")
+    resp = requests.get(url, params=params, timeout=30)
+    resp.raise_for_status()
+    print("    ✅ WhatsApp message sent successfully")
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
 def run_agent():
     from weather_engine import run_all_cities
 
@@ -260,7 +281,7 @@ def run_agent():
 
     print(f"\n✅ Got results for {len(results)} cities")
 
-    print("\n✍️  Step 2/3 — Generating AI narrative via Groq...")
+    print("\n✍️  Step 2/3 — Generating AI narrative via Devstral 2512...")
     narrative = generate_narrative(results, target_date)
     print(f"\n─── Narrative preview ───────────────────────────────")
     print(narrative[:300] + "..." if len(narrative) > 300 else narrative)
@@ -274,10 +295,12 @@ def run_agent():
     subject = f"🌦️ India Weather Briefing — {target_date}{hw_suffix}"
     html    = build_html_email(results, narrative, target_date)
 
-    print(f"\n📧 Step 3/3 — Subject: {subject}")
-
+    print(f"\n📧 Step 3/4 — Subject: {subject}")
     print("\n📤 Sending email...")
     send_email(html, subject)
+
+    print("\n📱 Step 4/4 — Sending WhatsApp notification...")
+    send_whatsapp(narrative, target_date)
 
     print("\n" + "=" * 60)
     print("✅ Agent run complete.")
