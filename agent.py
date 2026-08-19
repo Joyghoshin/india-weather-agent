@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 agent.py
-Agentic layer: calls Groq API (meta-llama/llama-4-scout-17b-16e-instruct) to generate a natural-language
+Agentic layer: calls Groq API (openai/gpt-oss-20b) to generate a natural-language
 weather briefing, then formats it into a rich HTML email and sends via Gmail SMTP.
 
 Cities: Bengaluru, Delhi, Kolkata, Chennai, Mumbai
@@ -50,7 +50,6 @@ Write a concise but engaging 200-250 word weather briefing covering:
 1. A one-line overall summary of conditions across these cities
 2. Notable cities — highlight extremes (hottest, coolest, wettest, any heatwave alerts)
 3. Any active heatwave alerts with practical safety advice
-advisories
 4. A short outlook line
 
 Use a professional but friendly tone. Use city emojis naturally.
@@ -62,9 +61,9 @@ Return ONLY the narrative text, no JSON, no markdown headers."""
         "Content-Type": "application/json",
     }
     
-    # Using open-source Llama model on Groq
+    # Using active open-weights production model on Groq
     body = {
-        "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+        "model": "openai/gpt-oss-20b",
         "max_tokens": 600,
         "temperature": 0.7,
         "messages": [
@@ -207,7 +206,7 @@ def build_html_email(results: list, narrative: str, target_date: str) -> str:
       <!-- Footer -->
       <p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center;">
         Data: Open-Meteo NWP · Heatwave criteria: IMD (Tmax ≥ 40°C or anomaly ≥ +4.5°C)<br>
-        Powered by Llama 4 Scout + GitHub Actions
+        Powered by GPT OSS 20B + GitHub Actions
       </p>
     </div>
   </div>
